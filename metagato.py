@@ -46,44 +46,105 @@ from minimax import minimax_iterativo
 """Clase que representa el juego del metagato"""
 class MetaGato(ModeloJuegoZT2):
     def inicializa(self):
+        """ Representamos el estado como un diccionario con 3 llaves donde,
+            tablero: representa la lista de los 9 tableros pequeños
+            global: represtenta el tablero grande, para tener control de quien gana la partida
+            activo: tablero acitvo para el siguiente jugador. Si es None, se puede jugar en cualquier tablero,
+                    de otra forma un numero del 0 al 8 representa el tablero en que se puede jugar."""
+        
         estado = {
             "tablero": [[[0]*3 for _ in range(3)] for _ in range(9)],
             "global": [[0]*3 for _ in range(3)],
             "activo": None
         }
-        jugador_inicial = 1
+        jugador_inicial = 1 #jugador inicial por defecto
         return estado, jugador_inicial
 
     def jugadas_legales(self, s, j):
-        jugadas = []
-        tableros = s["tableros"]
+        jugadas = [] #lista para guardar las jugadas legales
+        tablero = s["tablero"]
         tablero_activo = s["activo"]
         
-        # Si no hay un tablero activo, se puede jugar en cualquiera que no esté ganado
+        #si no hay un tablero activo, se puede jugar en cualquiera que no esté ganado
         tableros_validos = []
-        if tablero_activo is None:
+        if tablero_activo is None: #si no hay tablero activo, se puede jugar en cualquiera
             for i in range(9):
-                if not self.tablero_completo(tableros[i]):
+                if not self.tablero_completo(tablero[i]): #checamos si no está completo
                     tableros_validos.append(i)
-        else:
-            if not self.tablero_completo(tableros[tablero_activo]):
+        else: 
+            if not self.tablero_completo(tablero[tablero_activo]): #checamos si podemos jugar en el tablero activo
                 tableros_validos = [tablero_activo]
-            else:
+            else: #si el tablero activo está completo, se puede jugar en cualquier otro
                 for i in range(9):
-                    if not self.tablero_completo(tableros[i]):
+                    if not self.tablero_completo(tablero[i]):
                         tableros_validos.append(i)
 
-        # Buscar posiciones vacías dentro de los tableros válidos
+        #buscamos las posiciones vacías dentro de los tableros válidos
         for t in tableros_validos:
             for fila in range(3):
                 for col in range(3):
-                    if tableros[t][fila][col] == 0:
+                    if tablero[t][fila][col] == 0:
                         jugadas.append((t, fila, col))
         return jugadas
 
 
     def transicion(self, s, a, j):
-        pass
+        nuevo_estado = {
+            "tablero": [[fila[:] for fila in tablero] for tablero in s["tablero"]],
+            "global": [fila[:] for fila in s["global"]],
+            "activo": s["activo"]
+        }
+        
+        tablero_idx, fila, columna = a
+        #creamos una copia del estado actual
+        nuevo_estado["tablero"][tablero_idx][fila][columna] = j
+
+        #revisamos si el tablero pequeño ya se ganó
+        tablero_actual = nuevo_estado["tablero"][tablero_idx]
+        if self.gana_tablero(tablero_actual, j):
+            nuevo_estado["global"][tablero_idx // 3][tablero_idx % 3] = j
+
+        #actualizamos el tablero activo
+        siguiente_tablero = fila * 3 + columna
+
+        #revisamos si el siguiente tablero ya está ganado o lleno
+        tablero_siguiente = nuevo_estado["tablero"][siguiente_tablero] if 0 <= siguiente_tablero < 9 else None
+        if tablero_siguiente:
+            lleno = all(celda != 0 for fila in tablero_siguiente for celda in fila)
+            ganado = nuevo_estado["global"][siguiente_tablero // 3][siguiente_tablero % 3] != 0
+        else:
+            lleno = True
+            ganado = True
+
+        if lleno or ganado:
+            nuevo_estado["activo"] = None  # Puede jugar en cualquier tablero disponible
+        else:
+            nuevo_estado["activo"] = siguiente_tablero
+
+        return nuevo_estado
+    
+    def tablero_completo(self, tablero):
+        for fila in tablero:
+            for celda in fila:
+                if celda == 0:
+                    return False
+        return True
+    
+    def gana_tablero(self, tablero, jugador):
+        """Revisamos si el jugador ganó en un tablero pequeño 3x3"""
+        for fila in tablero:
+            if all(celda == jugador for celda in fila):
+                return True
+        for col in range(3):
+            if all(fila[col] == jugador for fila in tablero):
+                return True
+        
+        if all(tablero[i][i] == jugador for i in range(3)):
+            return True
+        if all(tablero[i][2-i] == jugador for i in range(3)):
+            return True
+        return False
+
 
     def terminal(self, s):
         pass
@@ -91,9 +152,10 @@ class MetaGato(ModeloJuegoZT2):
     def ganancia(self, s):
         pass
 
+        
 def pprint_gato(s):
     simbolos = {1: 'X', -1: 'O', 0: ' '}
-    tableros = estado["tablero"]
+    tableros = s["tablero"]
 
     def fila_de_superfila(i):
         fila = ""
@@ -110,22 +172,27 @@ def pprint_gato(s):
         if super_fila < 2:
             print("=" * 35)
 
-def tablero_completo(self, tablero):
-    for fila in tablero:
-        for celda in fila:
-            if celda == 0:
-                return False
-    return True
-
-
 if __name__ == '__main__':
     juego = MetaGato()
     estado, jugador = juego.inicializa()
 
-    estado["tablero"][0][0][0] = 1   # X
-    estado["tablero"][0][0][1] = -1  # O
-    estado["tablero"][4][1][1] = 1   # X en el centro del tablero central
+    print("Tablero inicial:")
     pprint_gato(estado)
+    
+    print("\nJugador", "X" if jugador == 1 else "O", "hace jugada en tablero 0, fila 1, columna 1")
+    accion = (0, 1, 1)  # tablero 0, fila 1, columna 1
+    nuevo_estado = juego.transicion(estado, accion, jugador)
+
+    print("\nNuevo tablero después de la jugada:")
+    pprint_gato(nuevo_estado)
+
+    print("\nTablero activo para el siguiente turno:", nuevo_estado["activo"])
+
+    #Jugadas legales para el jugador
+    jugadas = juego.jugadas_legales(nuevo_estado, jugador)
+    print("\nJugadas legales para el jugador:", jugadas)
+
+
 
 
     
