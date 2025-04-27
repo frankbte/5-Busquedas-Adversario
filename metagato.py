@@ -147,7 +147,18 @@ class MetaGato(ModeloJuegoZT2):
 
 
     def terminal(self, s):
-        pass
+        # Si hay un ganador, el juego terminó
+        if self.ganancia(s) != 0:
+            return True
+        
+        # Verificar si hay al menos un sub-tablero sin ganador y sin empate
+        for i in range(3):
+            for j in range(3):
+                if s["global"][i][j] == 0:
+                    return False  # Hay al menos un espacio disponible
+
+        # Si no hay espacios en el global, el juego terminó en empate
+        return True
 
     def ganancia(self, s):
         pass
@@ -172,27 +183,49 @@ def pprint_gato(s):
         if super_fila < 2:
             print("=" * 35)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     juego = MetaGato()
-    estado, jugador = juego.inicializa()
+    estado, jugador_inicial = juego.inicializa()
 
-    print("Tablero inicial:")
+    #estado inicial
+    print("Estado inicial del juego:")
     pprint_gato(estado)
+
+    #el jugador inicial hace su jugada
+    accion = (0, 1, 1)  # (tablero, fila, columna)
+    print(f"Jugador {jugador_inicial} hace jugada en {accion}")
+    estado = juego.transicion(estado, accion, jugador_inicial)
+    pprint_gato(estado)
+
+    # Cambio manual de jugador (esto por mientras desarrollo la heuristica)
+    jugador_siguiente = -jugador_inicial
+
+    # Jugador 2 hace su jugada
+    accion = (1, 2, 0)
+    print(f"Jugador {jugador_siguiente} hace jugada en {accion}")
+    estado = juego.transicion(estado, accion, jugador_siguiente)
+    pprint_gato(estado)
+
+    # Continuamos...
+    accion = (2, 0, 0)
+    print(f"Jugador {jugador_inicial} hace jugada en {accion}")
+    estado = juego.transicion(estado, accion, jugador_inicial)
+    pprint_gato(estado)
+
+    accion = (3, 1, 1)
+    print(f"Jugador {jugador_siguiente} hace jugada en {accion}")
+    estado = juego.transicion(estado, accion, jugador_siguiente)
+    pprint_gato(estado)
+
+    # Verificar si el juego ha terminado
+    if juego.terminal(estado):
+        print("El juego ha terminado.")
+    else:
+        print("El juego no ha terminado.")
     
-    print("\nJugador", "X" if jugador == 1 else "O", "hace jugada en tablero 0, fila 1, columna 1")
-    accion = (0, 1, 1)  # tablero 0, fila 1, columna 1
-    nuevo_estado = juego.transicion(estado, accion, jugador)
-
-    print("\nNuevo tablero después de la jugada:")
-    pprint_gato(nuevo_estado)
-
-    print("\nTablero activo para el siguiente turno:", nuevo_estado["activo"])
-
-    #Jugadas legales para el jugador
-    jugadas = juego.jugadas_legales(nuevo_estado, jugador)
-    print("\nJugadas legales para el jugador:", jugadas)
-
-
-
-
-    
+    # Verificar quién es el ganador (si hay)
+    ganador = juego.ganancia(estado)
+    if ganador != 0:
+        print(f"El ganador es el jugador: {ganador}")
+    else:
+        print("No hay ganador aún.")
