@@ -1,7 +1,9 @@
 from juegos_simplificado import ModeloJuegoZT2
-from juegos_simplificado import juega_dos_jugadores
+from juegos_simplificado import juega_dos_jugadores, minimax
 from minimax import jugador_negamax
 from minimax import minimax_iterativo
+
+import random
 
 """ El metagato es una variante del juego del gato,
     este sigue las reglas basicas, pero con algunas 
@@ -161,7 +163,27 @@ class MetaGato(ModeloJuegoZT2):
         return True
 
     def ganancia(self, s):
-        pass
+        global_tablero = s["global"]
+        
+        # Revisar filas
+        for fila in global_tablero:
+            if fila[0] == fila[1] == fila[2] != 0:
+                return fila[0]
+        
+        # Revisar columnas
+        for col in range(3):
+            if global_tablero[0][col] == global_tablero[1][col] == global_tablero[2][col] != 0:
+                return global_tablero[0][col]
+        
+        # Revisar diagonales
+        if global_tablero[0][0] == global_tablero[1][1] == global_tablero[2][2] != 0:
+            return global_tablero[0][0]
+        if global_tablero[0][2] == global_tablero[1][1] == global_tablero[2][0] != 0:
+            return global_tablero[0][2]
+        
+        # Si no hay ganador, devolver 0
+        return 0
+
 
         
 def pprint_gato(s):
@@ -183,6 +205,129 @@ def pprint_gato(s):
         if super_fila < 2:
             print("=" * 35)
 
+# ──────────────────────────────────────────────────────────────────────────────
+#  Funciones de apoyo para jugar Meta‑Gato en modo manual
+# ──────────────────────────────────────────────────────────────────────────────
+
+def pprint_metagato(s):
+    """Imprime el estado de los 9 tableros pequeños y el tablero global."""
+    signos = {0: ".", 1: "X", 2: "O"}
+    tableros = s["tablero"]
+
+    # Dibujamos los 9 tableros en una cuadrícula 3×3
+    for bloque_fila in range(3):
+        for fila in range(3):
+            linea = []
+            for bloque_col in range(3):
+                idx = bloque_fila * 3 + bloque_col
+                for col in range(3):
+                    linea.append(signos[tableros[idx][fila][col]])
+                if bloque_col < 2:
+                    linea.append("│")          # separador vertical entre tableros
+            print(" ".join(linea))
+        if bloque_fila < 2:
+            print("─" * 23)                   # separador horizontal entre filas de tableros
+
+    # Tablero global (para ver quién ha ganado cada sub‑tablero)
+    print("\nTablero global:")
+    for fila in s["global"]:
+        print(" ".join(signos[c] for c in fila))
+    print()  # línea en blanco al final
+
+
+def jugador_manual_metagato(juego, s, j):
+    """
+    Jugador manual para Meta‑Gato.
+    
+    El usuario puede introducir:
+        • Tres números separados por espacio  ->  tablero fila columna
+        • Un índice de la lista mostrada      ->  número simple
+    """
+    jugada = None
+    print("Estado actual:")
+    pprint_metagato(s)
+
+    if s["activo"] is None:
+        print("Puedes jugar en *cualquier* tablero no terminado.")
+    else:
+        print(f"Debes jugar en el tablero pequeño {s['activo']}.")
+
+    print("Turno del jugador:", j, "(X = 1, O = 2)")
+    jugadas = juego.jugadas_legales(s, j)
+
+    # Mostramos las jugadas con un índice para que sea más cómodo elegir
+    print("Jugadas legales:")
+    for idx, (t, f, c) in enumerate(jugadas):
+        print(f"  {idx:2d}: tablero {t}, fila {f}, col {c}")
+
+    while jugada not in jugadas:
+        entrada = input(
+            "\n→ Escribe 'tablero fila col' (e.g. 4 1 2) o el número de índice: "
+        ).strip().split()
+
+        try:
+            # Caso 1: un solo número ⇒ lo interpretamos como índice
+            if len(entrada) == 1:
+                idx = int(entrada[0])
+                jugada = jugadas[idx]  # se lanza IndexError si idx no válido
+
+            # Caso 2: tres números ⇒ (tablero, fila, col)
+            elif len(entrada) == 3:
+                t, f, c = map(int, entrada)
+                jugada = (t, f, c)
+
+            else:
+                raise ValueError
+
+        except (ValueError, IndexError):
+            print("Entrada no válida. Intenta de nuevo…")
+            jugada = None  # forzamos repetir el bucle
+
+        if jugada not in jugadas:
+            print("→ Esa jugada no es legal en este momento.")
+
+    return jugada
+
+def jugador_aleatorio_metagato(juego, s, j):
+    """
+    Jugador aleatorio para el juego del MetaGato.
+    """
+    jugadas = juego.jugadas_legales(s, j)
+    return random.choice(jugadas)
+
+def jugador_minimax_metagato(juego, s, j):
+
+    return minimax(juego, s, j)
+
+
+def juega_Metagato(jugador='X'):
+    """
+    Juega el juego del gato
+
+    """
+    if jugador not in ['X', 'O']:
+        raise ValueError("El jugador solo puede tener los valores 'X' o 'O'")
+    juego = MetaGato()
+    
+    print("El juego del gato")
+    print(f"Las 'X' siempre empiezan y tu juegas con {jugador}")
+    
+    estado, jugador = juego.inicializa()
+
+    while not juego.terminal(estado):
+        if jugador == 1:
+            accion = jugador_manual_metagato(juego, estado, jugador)
+        else:
+            accion = jugador_aleatorio_metagato(juego, estado, jugador)
+
+        estado = juego.transicion(estado, accion, jugador)
+        jugador = 3 - jugador  # alternar 1 ↔ 2
+
+        
+if __name__ == '__main__':
+    juega_Metagato('O')
+
+"""
 if __name__ == "__main__":
     juego = MetaGato()
     estado, jugador_inicial = juego.inicializa()
@@ -229,3 +374,6 @@ if __name__ == "__main__":
         print(f"El ganador es el jugador: {ganador}")
     else:
         print("No hay ganador aún.")
+
+    
+"""
