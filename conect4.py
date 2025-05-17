@@ -104,6 +104,20 @@ def ordena_centro(jugadas, jugador):
     """
     return sorted(jugadas, key=lambda x: abs(x - 4))
 
+def ordena_centro2(jugadas, jugador):
+    """
+    Ordena las jugadas de acuerdo a la distancia al centro, 
+    pero considerando también la estrategia del jugador
+    """
+    # Orden de prioridad: centro primero, luego alternando hacia los lados
+    orden_prioritario = [3, 2, 4, 1, 5, 0, 6]
+    
+    # Crear un diccionario para mapear columna a prioridad
+    prioridades = {col: i for i, col in enumerate(orden_prioritario)}
+    
+    # Ordenar según la prioridad establecida
+    return sorted(jugadas, key=lambda x: prioridades.get(x, 999))
+
 def evalua_3con(s):
     """
     Evalua el estado s para el jugador 1
